@@ -8,6 +8,23 @@ document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', function(e) {
         e.preventDefault(); // Prevent default form submission
 
+        // SPAM PROTECTION: Check honeypot field
+        const honeypot = document.getElementById('website').value;
+        if (honeypot !== '') {
+            // Bot detected - silently fail
+            console.log('Spam detected - honeypot field filled');
+            return;
+        }
+
+        // SPAM PROTECTION: Rate limiting (max 1 submission per 60 seconds)
+        const lastSubmission = localStorage.getItem('lastSubmissionTime');
+        const now = Date.now();
+        if (lastSubmission && (now - parseInt(lastSubmission)) < 60000) {
+            const waitTime = Math.ceil((60000 - (now - parseInt(lastSubmission))) / 1000);
+            showMessage(`Please wait ${waitTime} seconds before submitting again.`, 'error');
+            return;
+        }
+
         // Get form values
         const name = document.getElementById('name').value.trim();
         const phone = document.getElementById('phone').value.trim();
@@ -61,26 +78,53 @@ document.addEventListener('DOMContentLoaded', function() {
         submitButton.textContent = 'Submitting...';
         submitButton.classList.add('opacity-50', 'cursor-not-allowed');
 
-        // Simulate form submission (will be replaced with Firebase in Phase 6)
+        // Save to localStorage (simulating Firebase)
         setTimeout(() => {
-            // Success! Clear form and show success message
-            form.reset();
-            submitButton.disabled = false;
-            submitButton.textContent = 'Join Waitlist';
-            submitButton.classList.remove('opacity-50', 'cursor-not-allowed');
+            try {
+                // Create entry object
+                const entry = {
+                    id: 'entry_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                    name,
+                    phone,
+                    age: ageNum,
+                    location,
+                    preferredTime,
+                    contactPreference,
+                    status: 'waiting',
+                    timestamp: new Date().toISOString()
+                };
 
-            showMessage(`Thank you, ${name}! You've been added to the waitlist. Coach Wong will contact you soon.`, 'success');
+                // Get existing waitlist data
+                const savedData = localStorage.getItem('waitlistData');
+                let waitlistData = savedData ? JSON.parse(savedData) : [];
 
-            // Log submission for debugging (will be removed when Firebase is added)
-            console.log('Form submitted:', {
-                name,
-                phone,
-                age: ageNum,
-                location,
-                preferredTime,
-                contactPreference,
-                timestamp: new Date().toISOString()
-            });
+                // Add new entry
+                waitlistData.push(entry);
+
+                // Save back to localStorage
+                localStorage.setItem('waitlistData', JSON.stringify(waitlistData));
+
+                // Update last submission time for rate limiting
+                localStorage.setItem('lastSubmissionTime', Date.now().toString());
+
+                // Success! Clear form and show success message
+                form.reset();
+                submitButton.disabled = false;
+                submitButton.textContent = 'Join Waitlist';
+                submitButton.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                showMessage(`Thank you, ${name}! You've been added to the waitlist. Coach Wong will contact you soon.`, 'success');
+
+                console.log('Form submitted successfully:', entry);
+            } catch (error) {
+                // Error handling
+                submitButton.disabled = false;
+                submitButton.textContent = 'Join Waitlist';
+                submitButton.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                showMessage('Sorry, there was an error submitting your form. Please try again.', 'error');
+                console.error('Form submission error:', error);
+            }
         }, 1000);
     });
 
