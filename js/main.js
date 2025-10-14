@@ -30,10 +30,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Validate phone number (required, basic format check)
-        const phonePattern = /^[6|8|9]\d{7}$/; // Singapore phone format
+        // Malaysia format: 01X-XXXXXXX or 01X-XXXXXXXX (10-11 digits total)
+        const phonePattern = /^01[0-9]-?\d{7,8}$/; // Malaysia phone format
         if (!phonePattern.test(phone.replace(/\s+/g, ''))) {
             isValid = false;
-            errorMessages.push('Please enter a valid Singapore phone number (e.g., 91234567)');
+            errorMessages.push('Please enter a valid Malaysia phone number (e.g., 012-3456789 or 0123456789)');
             highlightError('phone');
         } else {
             removeError('phone');
