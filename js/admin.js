@@ -128,6 +128,22 @@ function renderWaitlist(filter = 'all') {
 
         const contactPrefText = entry.contactPreference === 'any-available' ? 'Any slot' : 'Preferred only';
 
+        // Handle lesson type and ages (with backwards compatibility)
+        let lessonTypeBadge, agesDisplay;
+        if (entry.lessonType) {
+            // New format
+            if (entry.lessonType === 'private') {
+                lessonTypeBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Private</span>';
+            } else {
+                lessonTypeBadge = `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">Group of ${entry.groupSize}</span>`;
+            }
+            agesDisplay = entry.ages.join(', ');
+        } else {
+            // Old format (backwards compatibility)
+            lessonTypeBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Private</span>';
+            agesDisplay = entry.age || '-';
+        }
+
         return `
             <tr class="hover:bg-gray-50" data-id="${entry.id}">
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formattedDate}</td>
@@ -135,7 +151,8 @@ function renderWaitlist(filter = 'all') {
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <a href="tel:${entry.phone}" class="text-blue-600 hover:text-blue-800">${entry.phone}</a>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${entry.age}</td>
+                <td class="px-6 py-4 whitespace-nowrap">${lessonTypeBadge}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${agesDisplay}</td>
                 <td class="px-6 py-4 text-sm text-gray-900">${entry.location || '-'}</td>
                 <td class="px-6 py-4 text-sm text-gray-900">${entry.preferredTime || '-'}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${contactPrefText}</td>
@@ -232,11 +249,25 @@ function exportToCSV() {
         return;
     }
 
-    const headers = ['Date Added', 'Name', 'Phone', 'Age', 'Location', 'Preferred Time', 'Contact Preference', 'Status'];
+    const headers = ['Date Added', 'Name', 'Phone', 'Lesson Type', 'Group Size', 'Ages', 'Location', 'Preferred Time', 'Contact Preference', 'Status'];
     const rows = waitlistData.map(entry => {
         const date = new Date(entry.timestamp).toLocaleDateString('en-MY');
         const contactPref = entry.contactPreference === 'any-available' ? 'Any slot' : 'Preferred only';
-        return [date, entry.name, entry.phone, entry.age, entry.location || '', entry.preferredTime || '', contactPref, entry.status];
+
+        // Handle new and old data formats
+        let lessonType, groupSize, ages;
+        if (entry.lessonType) {
+            lessonType = entry.lessonType === 'private' ? 'Private' : 'Group';
+            groupSize = entry.groupSize || 1;
+            ages = entry.ages.join(', ');
+        } else {
+            // Old format backwards compatibility
+            lessonType = 'Private';
+            groupSize = 1;
+            ages = entry.age || '';
+        }
+
+        return [date, entry.name, entry.phone, lessonType, groupSize, ages, entry.location || '', entry.preferredTime || '', contactPref, entry.status];
     });
 
     let csvContent = headers.join(',') + '\n';
@@ -291,7 +322,9 @@ function loadSampleData() {
                 id: 'sample1',
                 name: 'Ahmad Ali',
                 phone: '012-3456789',
-                age: 8,
+                lessonType: 'private',
+                groupSize: 1,
+                ages: [8],
                 location: 'Block 123, KLCC Residences',
                 preferredTime: 'Weekends, 2-4pm',
                 contactPreference: 'any-available',
@@ -302,7 +335,9 @@ function loadSampleData() {
                 id: 'sample2',
                 name: 'Siti Nurhaliza',
                 phone: '013-9876543',
-                age: 6,
+                lessonType: 'group',
+                groupSize: 2,
+                ages: [6, 8],
                 location: 'Marina Bay Apartments',
                 preferredTime: 'Flexible',
                 contactPreference: 'preferred-only',
@@ -313,7 +348,9 @@ function loadSampleData() {
                 id: 'sample3',
                 name: 'Lee Wei Ming',
                 phone: '016-5554321',
-                age: 10,
+                lessonType: 'group',
+                groupSize: 3,
+                ages: [10, 12, 14],
                 location: 'Damansara Heights',
                 preferredTime: 'Weekdays after 4pm',
                 contactPreference: 'any-available',

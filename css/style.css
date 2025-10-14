@@ -90,3 +90,17 @@ button:disabled {
     transform: translateX(5px);
   }
 }
+
+/* Age fields styling */
+.age-field-wrapper {
+  margin-bottom: 1rem;
+}
+
+#ages-container .age-field-wrapper:last-child {
+  margin-bottom: 0;
+}
+
+/* Group size container transition */
+#group-size-container {
+  transition: all 0.3s ease;
+}

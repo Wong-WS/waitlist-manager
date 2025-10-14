@@ -4,6 +4,64 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     const submitButton = form.querySelector('button[type="submit"]');
 
+    // Lesson type and group size elements
+    const lessonTypeRadios = document.querySelectorAll('input[name="lesson-type"]');
+    const groupSizeContainer = document.getElementById('group-size-container');
+    const groupSizeSelect = document.getElementById('group-size');
+    const agesContainer = document.getElementById('ages-container');
+
+    // Handle lesson type change
+    lessonTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'group') {
+                groupSizeContainer.classList.remove('hidden');
+                updateAgeFields(parseInt(groupSizeSelect.value));
+            } else {
+                groupSizeContainer.classList.add('hidden');
+                updateAgeFields(1);
+            }
+        });
+    });
+
+    // Handle group size change
+    groupSizeSelect.addEventListener('change', function() {
+        updateAgeFields(parseInt(this.value));
+    });
+
+    // Function to dynamically create age fields
+    function updateAgeFields(count) {
+        agesContainer.innerHTML = '';
+
+        for (let i = 1; i <= count; i++) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'age-field-wrapper mb-4';
+
+            const label = document.createElement('label');
+            label.setAttribute('for', `age-${i}`);
+            label.className = 'block text-sm font-medium text-gray-700 mb-1';
+            label.textContent = count === 1 ? 'Age' : `Age of Student ${i}`;
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.id = `age-${i}`;
+            input.name = `age-${i}`;
+            input.required = true;
+            input.min = '3';
+            input.max = '100';
+            input.className = 'age-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500';
+            input.style.fontFamily = "'Inter', sans-serif";
+
+            // Add input event listener for error clearing
+            input.addEventListener('input', function() {
+                removeError(this.id);
+            });
+
+            wrapper.appendChild(label);
+            wrapper.appendChild(input);
+            agesContainer.appendChild(wrapper);
+        }
+    }
+
     // Form validation and submission handler
     form.addEventListener('submit', function(e) {
         e.preventDefault(); // Prevent default form submission
@@ -28,7 +86,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // Get form values
         const name = document.getElementById('name').value.trim();
         const phone = document.getElementById('phone').value.trim();
-        const age = document.getElementById('age').value.trim();
+        const lessonType = document.querySelector('input[name="lesson-type"]:checked').value;
+        const groupSize = lessonType === 'group' ? parseInt(groupSizeSelect.value) : 1;
+
+        // Collect all ages
+        const ageInputs = document.querySelectorAll('.age-input');
+        const ages = [];
+        ageInputs.forEach(input => {
+            const ageValue = input.value.trim();
+            if (ageValue) {
+                ages.push(parseInt(ageValue));
+            }
+        });
+
         const location = document.getElementById('location').value.trim();
         const preferredTime = document.getElementById('preferred-time').value.trim();
         const contactPreference = document.querySelector('input[name="contact-preference"]:checked').value;
@@ -57,14 +127,21 @@ document.addEventListener('DOMContentLoaded', function() {
             removeError('phone');
         }
 
-        // Validate age (required, reasonable range)
-        const ageNum = parseInt(age);
-        if (isNaN(ageNum) || ageNum < 3 || ageNum > 100) {
+        // Validate ages (all must be valid)
+        if (ages.length === 0) {
             isValid = false;
-            errorMessages.push('Please enter a valid age (3-100)');
-            highlightError('age');
+            errorMessages.push('Please enter at least one age');
         } else {
-            removeError('age');
+            ageInputs.forEach((input, index) => {
+                const ageValue = parseInt(input.value);
+                if (isNaN(ageValue) || ageValue < 3 || ageValue > 100) {
+                    isValid = false;
+                    errorMessages.push(`Age ${index + 1}: Please enter a valid age (3-100)`);
+                    highlightError(input.id);
+                } else {
+                    removeError(input.id);
+                }
+            });
         }
 
         // If validation fails, show errors and stop
@@ -86,7 +163,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     id: 'entry_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                     name,
                     phone,
-                    age: ageNum,
+                    lessonType,
+                    groupSize,
+                    ages,
                     location,
                     preferredTime,
                     contactPreference,
