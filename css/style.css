@@ -1,0 +1,21 @@
+/* CSS variables - Like storing colors/fonts in variables */
+:root {
+  --primary-color: #3b82f6; /* Blue */
+  --text-color: #1f2937; /* Dark gray */
+  --background: #ffffff; /* White */
+  --border-radius: 8px; /* Rounded corners */
+}
+
+/* Reset - Makes all browsers behave the same */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Basic styling */
+body {
+  font-family: "Inter", sans-serif;
+  color: var(--text-color);
+  background: var(--background);
+}
