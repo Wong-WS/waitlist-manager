@@ -1,0 +1,158 @@
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Get form element
+    const form = document.querySelector('form');
+    const submitButton = form.querySelector('button[type="submit"]');
+
+    // Form validation and submission handler
+    form.addEventListener('submit', function(e) {
+        e.preventDefault(); // Prevent default form submission
+
+        // Get form values
+        const name = document.getElementById('name').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const age = document.getElementById('age').value.trim();
+        const location = document.getElementById('location').value.trim();
+        const preferredTime = document.getElementById('preferred-time').value.trim();
+        const contactPreference = document.querySelector('input[name="contact-preference"]:checked').value;
+
+        // Validation flags
+        let isValid = true;
+        let errorMessages = [];
+
+        // Validate name (required, min 2 characters)
+        if (name.length < 2) {
+            isValid = false;
+            errorMessages.push('Please enter a valid name (at least 2 characters)');
+            highlightError('name');
+        } else {
+            removeError('name');
+        }
+
+        // Validate phone number (required, basic format check)
+        const phonePattern = /^[6|8|9]\d{7}$/; // Singapore phone format
+        if (!phonePattern.test(phone.replace(/\s+/g, ''))) {
+            isValid = false;
+            errorMessages.push('Please enter a valid Singapore phone number (e.g., 91234567)');
+            highlightError('phone');
+        } else {
+            removeError('phone');
+        }
+
+        // Validate age (required, reasonable range)
+        const ageNum = parseInt(age);
+        if (isNaN(ageNum) || ageNum < 3 || ageNum > 100) {
+            isValid = false;
+            errorMessages.push('Please enter a valid age (3-100)');
+            highlightError('age');
+        } else {
+            removeError('age');
+        }
+
+        // If validation fails, show errors and stop
+        if (!isValid) {
+            showMessage(errorMessages.join('<br>'), 'error');
+            return;
+        }
+
+        // Show loading state
+        submitButton.disabled = true;
+        submitButton.textContent = 'Submitting...';
+        submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+
+        // Simulate form submission (will be replaced with Firebase in Phase 6)
+        setTimeout(() => {
+            // Success! Clear form and show success message
+            form.reset();
+            submitButton.disabled = false;
+            submitButton.textContent = 'Join Waitlist';
+            submitButton.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            showMessage(`Thank you, ${name}! You've been added to the waitlist. Coach Wong will contact you soon.`, 'success');
+
+            // Log submission for debugging (will be removed when Firebase is added)
+            console.log('Form submitted:', {
+                name,
+                phone,
+                age: ageNum,
+                location,
+                preferredTime,
+                contactPreference,
+                timestamp: new Date().toISOString()
+            });
+        }, 1000);
+    });
+
+    // Helper function to highlight error fields
+    function highlightError(fieldId) {
+        const field = document.getElementById(fieldId);
+        field.classList.add('border-red-500', 'bg-red-50');
+        field.classList.remove('border-gray-300');
+    }
+
+    // Helper function to remove error highlighting
+    function removeError(fieldId) {
+        const field = document.getElementById(fieldId);
+        field.classList.remove('border-red-500', 'bg-red-50');
+        field.classList.add('border-gray-300');
+    }
+
+    // Clear error highlighting when user starts typing
+    const inputs = form.querySelectorAll('input[type="text"], input[type="tel"], input[type="number"]');
+    inputs.forEach(input => {
+        input.addEventListener('input', function() {
+            removeError(this.id);
+        });
+    });
+
+    // Show success/error messages
+    function showMessage(message, type) {
+        // Remove existing message if any
+        const existingMessage = document.querySelector('.form-message');
+        if (existingMessage) {
+            existingMessage.remove();
+        }
+
+        // Create message element
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `form-message fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-4 rounded-lg shadow-lg z-50 max-w-md text-center transition-all duration-300 ${
+            type === 'success'
+                ? 'bg-green-500 text-white'
+                : 'bg-red-500 text-white'
+        }`;
+        messageDiv.innerHTML = `
+            <div class="flex items-center justify-between gap-4">
+                <span>${message}</span>
+                <button class="close-message text-white hover:text-gray-200 font-bold text-xl">&times;</button>
+            </div>
+        `;
+
+        // Add to page
+        document.body.appendChild(messageDiv);
+
+        // Animate in
+        setTimeout(() => {
+            messageDiv.style.opacity = '1';
+            messageDiv.style.transform = 'translateX(-50%) translateY(0)';
+        }, 10);
+
+        // Close button handler
+        messageDiv.querySelector('.close-message').addEventListener('click', () => {
+            hideMessage(messageDiv);
+        });
+
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            hideMessage(messageDiv);
+        }, 5000);
+    }
+
+    // Hide message with animation
+    function hideMessage(messageDiv) {
+        messageDiv.style.opacity = '0';
+        messageDiv.style.transform = 'translateX(-50%) translateY(-20px)';
+        setTimeout(() => {
+            messageDiv.remove();
+        }, 300);
+    }
+});
