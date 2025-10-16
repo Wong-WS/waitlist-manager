@@ -87,7 +87,6 @@ function showAdminSection() {
 // Load waitlist data from Firestore
 function loadWaitlist() {
     db.collection("waitlist")
-        .orderBy("timestamp", "asc")
         .onSnapshot((snapshot) => {
             waitlistData = [];
             snapshot.forEach((doc) => {
