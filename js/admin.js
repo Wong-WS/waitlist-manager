@@ -84,10 +84,24 @@ function showAdminSection() {
     loadWaitlist();
 }
 
-// Load waitlist data
+// Load waitlist data from Firestore
 function loadWaitlist() {
-    renderWaitlist('all');
-    updateStats();
+    db.collection("waitlist")
+        .orderBy("timestamp", "asc")
+        .onSnapshot((snapshot) => {
+            waitlistData = [];
+            snapshot.forEach((doc) => {
+                waitlistData.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            renderWaitlist('all');
+            updateStats();
+        }, (error) => {
+            console.error("Error loading waitlist: ", error);
+            showToast("Error loading waitlist data", "error");
+        });
 }
 
 // Render waitlist entries
@@ -110,10 +124,14 @@ function renderWaitlist(filter = 'all') {
         emptyState.classList.add('hidden');
     }
 
-    filteredData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    filteredData.sort((a, b) => {
+        const aTime = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
+        const bTime = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp);
+        return aTime - bTime;
+    });
 
     tbody.innerHTML = filteredData.map(entry => {
-        const date = new Date(entry.timestamp);
+        const date = entry.timestamp?.toDate ? entry.timestamp.toDate() : new Date(entry.timestamp);
         const formattedDate = date.toLocaleDateString('en-MY', {
             day: '2-digit',
             month: 'short',
@@ -211,11 +229,17 @@ function filterWaitlist(filter) {
 window.markAsContacted = function(id) {
     const entry = waitlistData.find(e => e.id === id);
     if (entry) {
-        entry.status = 'contacted';
-        entry.contactedAt = new Date().toISOString();
-        saveToLocalStorage();
-        loadWaitlist();
-        showToast(`${entry.name} marked as contacted`, 'success');
+        db.collection("waitlist").doc(id).update({
+            status: 'contacted',
+            contactedAt: firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .then(() => {
+            showToast(`${entry.name} marked as contacted`, 'success');
+        })
+        .catch((error) => {
+            console.error("Error updating document: ", error);
+            showToast("Error updating status", "error");
+        });
     }
 };
 
@@ -223,11 +247,17 @@ window.markAsContacted = function(id) {
 window.markAsWaiting = function(id) {
     const entry = waitlistData.find(e => e.id === id);
     if (entry) {
-        entry.status = 'waiting';
-        delete entry.contactedAt;
-        saveToLocalStorage();
-        loadWaitlist();
-        showToast(`${entry.name} marked as waiting`, 'success');
+        db.collection("waitlist").doc(id).update({
+            status: 'waiting',
+            contactedAt: firebase.firestore.FieldValue.delete()
+        })
+        .then(() => {
+            showToast(`${entry.name} marked as waiting`, 'success');
+        })
+        .catch((error) => {
+            console.error("Error updating document: ", error);
+            showToast("Error updating status", "error");
+        });
     }
 };
 
@@ -235,10 +265,14 @@ window.markAsWaiting = function(id) {
 window.removeEntry = function(id) {
     const entry = waitlistData.find(e => e.id === id);
     if (entry && confirm(`Are you sure you want to remove ${entry.name} from the waitlist?`)) {
-        waitlistData = waitlistData.filter(e => e.id !== id);
-        saveToLocalStorage();
-        loadWaitlist();
-        showToast(`${entry.name} removed from waitlist`, 'success');
+        db.collection("waitlist").doc(id).delete()
+            .then(() => {
+                showToast(`${entry.name} removed from waitlist`, 'success');
+            })
+            .catch((error) => {
+                console.error("Error removing document: ", error);
+                showToast("Error removing entry", "error");
+            });
     }
 };
 
@@ -251,7 +285,7 @@ function exportToCSV() {
 
     const headers = ['Date Added', 'Name', 'Phone', 'Lesson Type', 'Group Size', 'Ages', 'Location', 'Preferred Time', 'Contact Preference', 'Status'];
     const rows = waitlistData.map(entry => {
-        const date = new Date(entry.timestamp).toLocaleDateString('en-MY');
+        const date = entry.timestamp?.toDate ? entry.timestamp.toDate().toLocaleDateString('en-MY') : new Date(entry.timestamp).toLocaleDateString('en-MY');
         const contactPref = entry.contactPreference === 'any-available' ? 'Any slot' : 'Preferred only';
 
         // Handle new and old data formats
@@ -311,63 +345,8 @@ function showToast(message, type) {
     }, 3000);
 }
 
-// Load sample data
+// Load sample data (no longer needed with Firebase, keeping for backwards compatibility)
 function loadSampleData() {
-    const savedData = localStorage.getItem('waitlistData');
-    if (savedData) {
-        waitlistData = JSON.parse(savedData);
-    } else {
-        waitlistData = [
-            {
-                id: 'sample1',
-                name: 'Ahmad Ali',
-                phone: '012-3456789',
-                lessonType: 'private',
-                groupSize: 1,
-                ages: [8],
-                location: 'Block 123, KLCC Residences',
-                preferredTime: 'Weekends, 2-4pm',
-                contactPreference: 'any-available',
-                status: 'waiting',
-                timestamp: new Date('2025-01-10T10:30:00').toISOString()
-            },
-            {
-                id: 'sample2',
-                name: 'Siti Nurhaliza',
-                phone: '013-9876543',
-                lessonType: 'group',
-                groupSize: 2,
-                ages: [6, 8],
-                location: 'Marina Bay Apartments',
-                preferredTime: 'Flexible',
-                contactPreference: 'preferred-only',
-                status: 'waiting',
-                timestamp: new Date('2025-01-11T14:20:00').toISOString()
-            },
-            {
-                id: 'sample3',
-                name: 'Lee Wei Ming',
-                phone: '016-5554321',
-                lessonType: 'group',
-                groupSize: 3,
-                ages: [10, 12, 14],
-                location: 'Damansara Heights',
-                preferredTime: 'Weekdays after 4pm',
-                contactPreference: 'any-available',
-                status: 'contacted',
-                timestamp: new Date('2025-01-09T09:15:00').toISOString()
-            }
-        ];
-    }
+    // Sample data is no longer needed with Firebase
+    // All data is now stored in Firestore
 }
-
-// Save to localStorage
-function saveToLocalStorage() {
-    localStorage.setItem('waitlistData', JSON.stringify(waitlistData));
-}
-
-// Add new entry (called from main.js)
-window.addToWaitlist = function(entry) {
-    waitlistData.push(entry);
-    saveToLocalStorage();
-};
