@@ -205,7 +205,7 @@ document.addEventListener("DOMContentLoaded", function () {
         submitButton.classList.remove("opacity-50", "cursor-not-allowed");
 
         showMessage(
-          `Thank you, ${name}! You've been added to the waitlist. Coach Wong will contact you soon.`,
+          `Thank you, ${name}! You've been added to the waitlist. Coach Wong will contact you as soon as the slots is available.`,
           "success"
         );
       })
