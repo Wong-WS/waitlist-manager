@@ -1,16 +1,21 @@
 // Admin Panel JavaScript
 // This manages authentication and waitlist display/management
 
-// Simulated database - In production, this would be Firebase
+// Waitlist data cache
 let waitlistData = [];
-
-// Admin password - In production, this should be in Firebase Authentication
-const ADMIN_PASSWORD = "swim2024"; // Change this to a secure password
 
 // Wait for DOM to load
 document.addEventListener("DOMContentLoaded", function() {
-    // Check if already authenticated
-    checkAuth();
+    // Check authentication state
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            // User is signed in
+            verifyAdminAndShowPanel(user);
+        } else {
+            // User is signed out
+            showLoginSection();
+        }
+    });
 
     // Login form handler
     const loginForm = document.getElementById("login-form");
@@ -33,47 +38,85 @@ document.addEventListener("DOMContentLoaded", function() {
     // Export CSV button
     const exportBtn = document.getElementById("export-csv-btn");
     exportBtn.addEventListener("click", exportToCSV);
-
-    // Load sample data for demonstration
-    loadSampleData();
 });
 
-// Check authentication status
-function checkAuth() {
-    const isAuthenticated = sessionStorage.getItem('adminAuthenticated');
-    if (isAuthenticated === 'true') {
-        showAdminSection();
-    } else {
+// Verify user is admin and show panel
+async function verifyAdminAndShowPanel(user) {
+    try {
+        // Get the user's ID token to check custom claims
+        const idTokenResult = await user.getIdTokenResult();
+
+        if (idTokenResult.claims.admin === true) {
+            // User is admin, show admin panel
+            showAdminSection();
+        } else {
+            // User is not admin
+            showLoginError('You do not have admin privileges.');
+            await auth.signOut();
+            showLoginSection();
+        }
+    } catch (error) {
+        console.error("Error verifying admin status:", error);
+        showLoginError('Error verifying admin status.');
         showLoginSection();
     }
 }
 
 // Handle login
-function handleLogin(e) {
+async function handleLogin(e) {
     e.preventDefault();
+    const email = document.getElementById('admin-email').value;
     const password = document.getElementById('admin-password').value;
     const errorDiv = document.getElementById('login-error');
 
-    if (password === ADMIN_PASSWORD) {
-        sessionStorage.setItem('adminAuthenticated', 'true');
+    try {
+        // Sign in with email and password
+        await auth.signInWithEmailAndPassword(email, password);
+        // Success - onAuthStateChanged will handle the rest
         errorDiv.classList.add('hidden');
-        showAdminSection();
-    } else {
-        errorDiv.classList.remove('hidden');
+    } catch (error) {
+        console.error("Login error:", error);
+        let errorMessage = 'Login failed. Please check your credentials.';
+
+        if (error.code === 'auth/wrong-password') {
+            errorMessage = 'Incorrect password. Please try again.';
+        } else if (error.code === 'auth/user-not-found') {
+            errorMessage = 'No admin account found with this email.';
+        } else if (error.code === 'auth/invalid-email') {
+            errorMessage = 'Invalid email address.';
+        } else if (error.code === 'auth/too-many-requests') {
+            errorMessage = 'Too many failed attempts. Please try again later.';
+        }
+
+        showLoginError(errorMessage);
         document.getElementById('admin-password').value = '';
     }
 }
 
 // Handle logout
-function handleLogout() {
-    sessionStorage.removeItem('adminAuthenticated');
-    showLoginSection();
+async function handleLogout() {
+    try {
+        await auth.signOut();
+        showLoginSection();
+        showToast('Logged out successfully', 'success');
+    } catch (error) {
+        console.error("Logout error:", error);
+        showToast('Error logging out', 'error');
+    }
+}
+
+// Show login error
+function showLoginError(message) {
+    const errorDiv = document.getElementById('login-error');
+    errorDiv.textContent = message;
+    errorDiv.classList.remove('hidden');
 }
 
 // Show login section
 function showLoginSection() {
     document.getElementById('login-section').classList.remove('hidden');
     document.getElementById('admin-section').classList.add('hidden');
+    document.getElementById('admin-email').value = '';
     document.getElementById('admin-password').value = '';
 }
 

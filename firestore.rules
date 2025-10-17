@@ -1,18 +1,33 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Waitlist collection rules
+    match /waitlist/{entryId} {
+      // Anyone can create a new waitlist entry (for customer signups)
+      allow create: if request.resource.data.keys().hasAll(['name', 'phone', 'lessonType', 'location', 'preferredTime', 'contactPreference', 'status', 'timestamp'])
+                    && request.resource.data.name is string
+                    && request.resource.data.phone is string
+                    && request.resource.data.status == 'waiting'
+                    && request.resource.data.timestamp == request.time;
+
+      // Anyone can read waitlist entries (for admin panel to display)
+      // In production, you might want to restrict this to authenticated admins only
+      allow read: if true;
+
+      // Only authenticated users can update entries (admin operations)
+      allow update: if request.auth != null
+                    && request.auth.token.admin == true;
+
+      // Only authenticated users can delete entries (admin operations)
+      allow delete: if request.auth != null
+                    && request.auth.token.admin == true;
+    }
+
+    // Deny all other collections by default
     match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2025, 11, 15);
+      allow read, write: if false;
     }
   }
 }

@@ -6,3 +6,6 @@ config.js
 
 # Firebase cache
 .firebase/
+
+# Firebase service account key (NEVER commit this!)
+serviceAccountKey.json

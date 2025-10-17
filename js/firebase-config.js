@@ -16,5 +16,9 @@ firebase.initializeApp(firebaseConfig);
 // Initialize Firestore
 const db = firebase.firestore();
 
+// Initialize Firebase Authentication
+const auth = firebase.auth();
+
 // Export for use in other files
 window.db = db;
+window.auth = auth;

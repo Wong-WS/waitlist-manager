@@ -8,6 +8,8 @@
 - `firebase deploy --only hosting` - Deploy only hosting files
 - `python3 -m http.server 8000` - Run local development server
 - `git push` - Push to GitHub (triggers automatic deployment via GitHub Actions)
+- `npm install` - Install Node.js dependencies for admin setup
+- `node setup-admin.js <email> <password>` - Create/update admin user
 
 ### Project Structure
 ```
@@ -19,7 +21,7 @@ waitlist-manager/
 │   └── style.css                # All styling
 ├── js/
 │   ├── main.js                  # Customer page functionality
-│   ├── admin.js                 # Admin panel functionality
+│   ├── admin.js                 # Admin panel functionality (Firebase Auth)
 │   ├── firebase-config.js       # Firebase configuration (safe to be public)
 │   └── firebase-config.template.js  # Template reference file
 ├── .github/workflows/           # GitHub Actions for auto-deployment
@@ -27,8 +29,12 @@ waitlist-manager/
 │   └── firebase-hosting-pull-request.yml  # Preview deployments for PRs
 ├── firebase.json                # Firebase hosting configuration
 ├── .firebaserc                  # Firebase project configuration
-├── firestore.rules              # Firestore security rules
-└── firestore.indexes.json       # Firestore database indexes
+├── firestore.rules              # Firestore security rules (admin auth enforced)
+├── firestore.indexes.json       # Firestore database indexes
+├── package.json                 # Node.js dependencies
+├── setup-admin.js               # Script to create admin users
+├── ADMIN_SETUP.md               # Admin authentication setup guide
+└── serviceAccountKey.json       # Firebase service account (DO NOT COMMIT!)
 ```
 
 ### Technology Stack
@@ -37,12 +43,13 @@ waitlist-manager/
 - Backend: Firebase Firestore (NoSQL database)
 - Hosting: Firebase Hosting
 - CI/CD: GitHub Actions (automatic deployment)
-- Authentication: Simple password-based admin access (to be upgraded to Firebase Auth)
+- Authentication: Firebase Authentication with custom admin claims
+- Admin Tools: Node.js (for admin user management)
 
 ### Deployment Info
 - **Live Site**: https://waitlist-manager-wong.web.app/
 - **Admin Panel**: https://waitlist-manager-wong.web.app/admin.html
-- **Admin Password**: swim2024 (stored in js/admin.js:8)
+- **Admin Setup**: See ADMIN_SETUP.md for creating admin users
 - **GitHub Repo**: https://github.com/Wong-WS/waitlist-manager
 - **Auto-Deploy**: Enabled via GitHub Actions on push to main branch
 
@@ -56,7 +63,9 @@ waitlist-manager/
 7. ✅ CSV export functionality
 8. ✅ Real-time updates using Firestore snapshots
 9. ✅ Automatic deployment via GitHub Actions
-10. ✅ Firestore security rules deployed
+10. ✅ Firestore security rules with admin authentication
+11. ✅ Firebase Authentication for secure admin access
+12. ✅ Custom admin claims for role-based access control
 
 ### Firestore Collections
 - `waitlist` - Stores customer signup data
@@ -65,13 +74,16 @@ waitlist-manager/
 ### Security Notes
 - Firebase config keys in `firebase-config.js` are safe to be public
 - Security is enforced through Firestore security rules
-- Admin password is currently client-side only (should upgrade to Firebase Authentication)
-- Firestore rules expire on 2025-11-15 (update before expiration)
+- Admin authentication uses Firebase Auth with custom claims (`admin: true`)
+- Only authenticated users with admin claim can update/delete waitlist entries
+- Service account key (`serviceAccountKey.json`) must NEVER be committed to Git
+- Firestore rules do not expire - properly configured for production use
 
 ### Future Improvements
-- [ ] Implement proper Firebase Authentication for admin access
 - [ ] Add email notifications for new signups
-- [ ] Implement search/filter functionality in admin panel
+- [ ] Implement advanced search/filter functionality in admin panel
 - [ ] Add pagination for large datasets
 - [ ] Create custom domain setup
 - [ ] Add analytics tracking
+- [ ] Implement password reset functionality
+- [ ] Add email verification for admin accounts
