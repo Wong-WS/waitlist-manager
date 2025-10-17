@@ -16,9 +16,12 @@ firebase.initializeApp(firebaseConfig);
 // Initialize Firestore
 const db = firebase.firestore();
 
-// Initialize Firebase Authentication
-const auth = firebase.auth();
+// Initialize Firebase Authentication (only if firebase.auth is available)
+// The customer page doesn't load the auth SDK, only the admin page does
+const auth = typeof firebase.auth === 'function' ? firebase.auth() : null;
 
 // Export for use in other files
 window.db = db;
-window.auth = auth;
+if (auth) {
+  window.auth = auth;
+}
