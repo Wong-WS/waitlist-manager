@@ -9,3 +9,6 @@ config.js
 
 # Firebase service account key (NEVER commit this!)
 serviceAccountKey.json
+
+# Tailwind CSS compiled output
+css/output.css

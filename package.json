@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "Swim Coach Waitlist Manager",
   "scripts": {
-    "setup-admin": "node setup-admin.js"
+    "setup-admin": "node setup-admin.js",
+    "build:css": "npx @tailwindcss/cli -i ./css/style.css -o ./css/output.css",
+    "watch:css": "npx @tailwindcss/cli -i ./css/style.css -o ./css/output.css --watch"
   },
   "keywords": [
     "firebase",
@@ -13,6 +15,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "firebase-admin": "^12.0.0"
+    "@tailwindcss/cli": "^4.1.14",
+    "firebase-admin": "^12.0.0",
+    "tailwindcss": "^4.1.14"
   }
 }
