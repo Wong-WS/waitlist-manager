@@ -22,8 +22,7 @@ waitlist-manager/
 ├── js/
 │   ├── main.js                  # Customer page functionality
 │   ├── admin.js                 # Admin panel functionality (Firebase Auth)
-│   ├── firebase-config.js       # Firebase configuration (safe to be public)
-│   └── firebase-config.template.js  # Template reference file
+│   └── firebase-config.js       # Firebase configuration (safe to be public)
 ├── .github/workflows/           # GitHub Actions for auto-deployment
 │   ├── firebase-hosting-merge.yml   # Deploy on PR merge to main
 │   └── firebase-hosting-pull-request.yml  # Preview deployments for PRs
