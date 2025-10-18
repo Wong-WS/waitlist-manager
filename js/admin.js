@@ -6,6 +6,15 @@ let waitlistData = [];
 
 // Wait for DOM to load
 document.addEventListener("DOMContentLoaded", function() {
+    // Set Firebase Auth persistence to SESSION (clears on browser close)
+    auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
+        .then(() => {
+            console.log("Session persistence set to SESSION mode");
+        })
+        .catch((error) => {
+            console.error("Error setting persistence:", error);
+        });
+
     // Check authentication state
     auth.onAuthStateChanged((user) => {
         if (user) {
