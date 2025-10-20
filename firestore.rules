@@ -12,9 +12,10 @@ service cloud.firestore {
                     && request.resource.data.status == 'waiting'
                     && request.resource.data.timestamp == request.time;
 
-      // Anyone can read waitlist entries (for admin panel to display)
-      // In production, you might want to restrict this to authenticated admins only
-      allow read: if true;
+      // Only authenticated admins can read waitlist entries
+      // This prevents unauthorized access to customer data (names, phones, locations)
+      allow read: if request.auth != null
+                  && request.auth.token.admin == true;
 
       // Only authenticated users can update entries (admin operations)
       allow update: if request.auth != null
