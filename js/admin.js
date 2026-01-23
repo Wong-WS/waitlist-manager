@@ -127,6 +127,7 @@ function showLoginError(message) {
 
 // Show login section
 function showLoginSection() {
+    document.getElementById('loading-section').classList.add('hidden');
     document.getElementById('login-section').classList.remove('hidden');
     document.getElementById('admin-section').classList.add('hidden');
     document.getElementById('admin-email').value = '';
@@ -135,6 +136,7 @@ function showLoginSection() {
 
 // Show admin section
 function showAdminSection() {
+    document.getElementById('loading-section').classList.add('hidden');
     document.getElementById('login-section').classList.add('hidden');
     document.getElementById('admin-section').classList.remove('hidden');
     loadWaitlist();
