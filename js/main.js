@@ -1,5 +1,8 @@
 // Wait for DOM to be fully loaded
 document.addEventListener("DOMContentLoaded", function () {
+  // Load apartments for the location dropdown
+  loadApartments();
+
   // Get form element
   const form = document.querySelector("form");
   const submitButton = form.querySelector('button[type="submit"]');
@@ -295,5 +298,27 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(() => {
       messageDiv.remove();
     }, 300);
+  }
+
+  // Load apartments from Firestore and populate dropdown
+  function loadApartments() {
+    const locationSelect = document.getElementById("location");
+
+    db.collection("apartments")
+      .orderBy("name")
+      .onSnapshot((snapshot) => {
+        // Clear existing options except the first placeholder
+        locationSelect.innerHTML = '<option value="">Select an apartment...</option>';
+
+        snapshot.forEach((doc) => {
+          const apartment = doc.data();
+          const option = document.createElement("option");
+          option.value = apartment.name;
+          option.textContent = apartment.name;
+          locationSelect.appendChild(option);
+        });
+      }, (error) => {
+        console.error("Error loading apartments: ", error);
+      });
   }
 });

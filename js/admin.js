@@ -47,6 +47,10 @@ document.addEventListener("DOMContentLoaded", function() {
     // Export CSV button
     const exportBtn = document.getElementById("export-csv-btn");
     exportBtn.addEventListener("click", exportToCSV);
+
+    // Add Apartment form handler
+    const addApartmentForm = document.getElementById("add-apartment-form");
+    addApartmentForm.addEventListener("submit", handleAddApartment);
 });
 
 // Verify user is admin and show panel
@@ -134,6 +138,7 @@ function showAdminSection() {
     document.getElementById('login-section').classList.add('hidden');
     document.getElementById('admin-section').classList.remove('hidden');
     loadWaitlist();
+    loadApartments();
 }
 
 // Load waitlist data from Firestore
@@ -401,3 +406,87 @@ function loadSampleData() {
     // Sample data is no longer needed with Firebase
     // All data is now stored in Firestore
 }
+
+// ==================== APARTMENT MANAGEMENT ====================
+
+// Load apartments from Firestore
+function loadApartments() {
+    db.collection("apartments")
+        .orderBy("name")
+        .onSnapshot((snapshot) => {
+            renderApartments(snapshot.docs);
+        }, (error) => {
+            console.error("Error loading apartments: ", error);
+            showToast("Error loading apartments", "error");
+        });
+}
+
+// Render apartments list
+function renderApartments(docs) {
+    const listContainer = document.getElementById('apartments-list');
+    const emptyState = document.getElementById('apartments-empty-state');
+
+    if (docs.length === 0) {
+        listContainer.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+    } else {
+        emptyState.classList.add('hidden');
+    }
+
+    listContainer.innerHTML = docs.map(doc => {
+        const apartment = doc.data();
+        return `
+            <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
+                <span class="text-gray-900 font-medium">${apartment.name}</span>
+                <button
+                    onclick="removeApartment('${doc.id}', '${apartment.name}')"
+                    class="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
+                    title="Remove apartment"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
+// Handle add apartment form submission
+async function handleAddApartment(e) {
+    e.preventDefault();
+    const nameInput = document.getElementById('apartment-name');
+    const apartmentName = nameInput.value.trim();
+
+    if (apartmentName.length === 0) {
+        showToast('Please enter an apartment name', 'error');
+        return;
+    }
+
+    try {
+        await db.collection("apartments").add({
+            name: apartmentName,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        showToast(`${apartmentName} added successfully`, 'success');
+        nameInput.value = '';
+    } catch (error) {
+        console.error("Error adding apartment: ", error);
+        showToast("Error adding apartment", "error");
+    }
+}
+
+// Remove apartment
+window.removeApartment = async function(id, name) {
+    if (confirm(`Are you sure you want to remove "${name}"?`)) {
+        try {
+            await db.collection("apartments").doc(id).delete();
+            showToast(`${name} removed successfully`, 'success');
+        } catch (error) {
+            console.error("Error removing apartment: ", error);
+            showToast("Error removing apartment", "error");
+        }
+    }
+};

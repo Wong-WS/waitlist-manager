@@ -65,10 +65,14 @@ waitlist-manager/
 10. ✅ Firestore security rules with admin authentication
 11. ✅ Firebase Authentication for secure admin access
 12. ✅ Custom admin claims for role-based access control
+13. ✅ Dynamic apartment location dropdown with admin management
 
 ### Firestore Collections
 - `waitlist` - Stores customer signup data
   - Fields: name, phone, lessonType, groupSize, ages, location, preferredTime, contactPreference, status, timestamp
+- `apartments` - Stores available apartment locations for dropdown selection
+  - Fields: name, createdAt
+  - Managed through admin panel
 
 ### Security Notes
 - Firebase config keys in `firebase-config.js` are safe to be public
