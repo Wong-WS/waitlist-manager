@@ -12,3 +12,6 @@ serviceAccountKey.json
 
 # Tailwind CSS compiled output
 css/output.css
+
+# Local settings                                       
+settings.local.json   
