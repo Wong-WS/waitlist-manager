@@ -173,11 +173,6 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    // Show loading state
-    submitButton.disabled = true;
-    submitButton.textContent = "Submitting...";
-    submitButton.classList.add("opacity-50", "cursor-not-allowed");
-
     // Create entry object
     const entry = {
       name,
@@ -192,34 +187,29 @@ document.addEventListener("DOMContentLoaded", function () {
       timestamp: firebase.firestore.FieldValue.serverTimestamp(),
     };
 
-    // Save to Firestore
+    // Optimistic: Show success message and reset form immediately
+    showMessage(
+      `Thank you, ${name}! You've been added to the waitlist. Coach Wong will contact you as soon as the slots is available.`,
+      "success"
+    );
+
+    // Update last submission time for rate limiting
+    localStorage.setItem("lastSubmissionTime", Date.now().toString());
+
+    // Reset form immediately
+    form.reset();
+    groupSizeContainer.classList.add("hidden");
+    updateAgeFields(1);
+
+    // Fire database add (don't wait)
     db.collection("waitlist")
       .add(entry)
       .then((docRef) => {
         console.log("Document written with ID: ", docRef.id);
-
-        // Update last submission time for rate limiting
-        localStorage.setItem("lastSubmissionTime", Date.now().toString());
-
-        // Success! Clear form and show success message
-        form.reset();
-        submitButton.disabled = false;
-        submitButton.textContent = "Join Waitlist";
-        submitButton.classList.remove("opacity-50", "cursor-not-allowed");
-
-        showMessage(
-          `Thank you, ${name}! You've been added to the waitlist. Coach Wong will contact you as soon as the slots is available.`,
-          "success"
-        );
       })
       .catch((error) => {
-        // Error handling
+        // Error handling - show error toast if database fails
         console.error("Error adding document: ", error);
-
-        submitButton.disabled = false;
-        submitButton.textContent = "Join Waitlist";
-        submitButton.classList.remove("opacity-50", "cursor-not-allowed");
-
         showMessage(
           "Sorry, there was an error submitting your form. Please try again.",
           "error"

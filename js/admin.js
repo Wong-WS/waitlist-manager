@@ -287,16 +287,16 @@ function filterWaitlist(filter) {
 window.markAsContacted = function(id) {
     const entry = waitlistData.find(e => e.id === id);
     if (entry) {
+        // Optimistic: Show toast immediately
+        showToast(`${entry.name} marked as contacted`, 'success');
+
+        // Fire database update (don't wait)
         db.collection("waitlist").doc(id).update({
             status: 'contacted',
             contactedAt: firebase.firestore.FieldValue.serverTimestamp()
-        })
-        .then(() => {
-            showToast(`${entry.name} marked as contacted`, 'success');
-        })
-        .catch((error) => {
+        }).catch((error) => {
             console.error("Error updating document: ", error);
-            showToast("Error updating status", "error");
+            showToast("Error updating status - please try again", "error");
         });
     }
 };
@@ -305,16 +305,16 @@ window.markAsContacted = function(id) {
 window.markAsWaiting = function(id) {
     const entry = waitlistData.find(e => e.id === id);
     if (entry) {
+        // Optimistic: Show toast immediately
+        showToast(`${entry.name} marked as waiting`, 'success');
+
+        // Fire database update (don't wait)
         db.collection("waitlist").doc(id).update({
             status: 'waiting',
             contactedAt: firebase.firestore.FieldValue.delete()
-        })
-        .then(() => {
-            showToast(`${entry.name} marked as waiting`, 'success');
-        })
-        .catch((error) => {
+        }).catch((error) => {
             console.error("Error updating document: ", error);
-            showToast("Error updating status", "error");
+            showToast("Error updating status - please try again", "error");
         });
     }
 };
@@ -323,14 +323,14 @@ window.markAsWaiting = function(id) {
 window.removeEntry = function(id) {
     const entry = waitlistData.find(e => e.id === id);
     if (entry && confirm(`Are you sure you want to remove ${entry.name} from the waitlist?`)) {
-        db.collection("waitlist").doc(id).delete()
-            .then(() => {
-                showToast(`${entry.name} removed from waitlist`, 'success');
-            })
-            .catch((error) => {
-                console.error("Error removing document: ", error);
-                showToast("Error removing entry", "error");
-            });
+        // Optimistic: Show toast immediately after confirmation
+        showToast(`${entry.name} removed from waitlist`, 'success');
+
+        // Fire database delete (don't wait)
+        db.collection("waitlist").doc(id).delete().catch((error) => {
+            console.error("Error removing document: ", error);
+            showToast("Error removing entry - please try again", "error");
+        });
     }
 };
 
@@ -456,7 +456,7 @@ function renderApartments(docs) {
 }
 
 // Handle add apartment form submission
-async function handleAddApartment(e) {
+function handleAddApartment(e) {
     e.preventDefault();
     const nameInput = document.getElementById('apartment-name');
     const apartmentName = nameInput.value.trim();
@@ -466,29 +466,30 @@ async function handleAddApartment(e) {
         return;
     }
 
-    try {
-        await db.collection("apartments").add({
-            name: apartmentName,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+    // Optimistic: Clear input and show toast immediately
+    nameInput.value = '';
+    showToast(`${apartmentName} added successfully`, 'success');
 
-        showToast(`${apartmentName} added successfully`, 'success');
-        nameInput.value = '';
-    } catch (error) {
+    // Fire database add (don't wait)
+    db.collection("apartments").add({
+        name: apartmentName,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch((error) => {
         console.error("Error adding apartment: ", error);
-        showToast("Error adding apartment", "error");
-    }
+        showToast("Error adding apartment - please try again", "error");
+    });
 }
 
 // Remove apartment
-window.removeApartment = async function(id, name) {
+window.removeApartment = function(id, name) {
     if (confirm(`Are you sure you want to remove "${name}"?`)) {
-        try {
-            await db.collection("apartments").doc(id).delete();
-            showToast(`${name} removed successfully`, 'success');
-        } catch (error) {
+        // Optimistic: Show toast immediately after confirmation
+        showToast(`${name} removed successfully`, 'success');
+
+        // Fire database delete (don't wait)
+        db.collection("apartments").doc(id).delete().catch((error) => {
             console.error("Error removing apartment: ", error);
-            showToast("Error removing apartment", "error");
-        }
+            showToast("Error removing apartment - please try again", "error");
+        });
     }
 };
