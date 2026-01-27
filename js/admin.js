@@ -437,7 +437,7 @@ function loadApartments() {
                 ...doc.data()
             }));
             renderApartments(snapshot.docs);
-            updateSlotLocationDropdown();
+            updateSlotLocationCheckboxes();
         }, (error) => {
             console.error("Error loading apartments: ", error);
             showToast("Error loading apartments", "error");
@@ -574,31 +574,29 @@ function loadAvailableSlots() {
                 slotsData[doc.id] = doc.data();
             });
             renderSlots();
-            updateSlotLocationDropdown();
+            updateSlotLocationCheckboxes();
         }, (error) => {
             console.error("Error loading available slots: ", error);
             showToast("Error loading available slots", "error");
         });
 }
 
-// Update the location dropdown in the slot form with available apartments
-function updateSlotLocationDropdown() {
-    const locationSelect = document.getElementById('slot-location');
-    const currentValue = locationSelect.value;
+// Update the location checkboxes in the slot form with available apartments
+function updateSlotLocationCheckboxes() {
+    const container = document.getElementById('slot-locations-checkboxes');
 
-    locationSelect.innerHTML = '<option value="">Select location...</option>';
-
-    apartmentsData.forEach(apartment => {
-        const option = document.createElement('option');
-        option.value = apartment.name;
-        option.textContent = apartment.name;
-        locationSelect.appendChild(option);
-    });
-
-    // Restore previous selection if still valid
-    if (currentValue && apartmentsData.some(a => a.name === currentValue)) {
-        locationSelect.value = currentValue;
+    if (apartmentsData.length === 0) {
+        container.innerHTML = '<span class="text-sm text-gray-500">No locations available. Add apartments above first.</span>';
+        return;
     }
+
+    container.innerHTML = apartmentsData.map(apartment => `
+        <label class="inline-flex items-center bg-white px-3 py-2 border border-gray-300 rounded-md hover:border-blue-400 cursor-pointer">
+            <input type="checkbox" value="${apartment.name}"
+                   class="slot-location-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+            <span class="ml-2 text-sm text-gray-700">${apartment.name}</span>
+        </label>
+    `).join('');
 }
 
 // Render slots grouped by location then by day
@@ -688,12 +686,20 @@ function formatTimeRange(start, end) {
 function handleAddSlot(e) {
     e.preventDefault();
 
-    const location = document.getElementById('slot-location').value;
+    // Get all checked locations
+    const checkedBoxes = document.querySelectorAll('.slot-location-checkbox:checked');
+    const locations = Array.from(checkedBoxes).map(cb => cb.value);
+
+    if (locations.length === 0) {
+        showToast('Please select at least one location', 'error');
+        return;
+    }
+
     const day = document.getElementById('slot-day').value;
     const startTime = document.getElementById('slot-start').value;
     const endTime = document.getElementById('slot-end').value;
 
-    if (!location || !day || !startTime || !endTime) {
+    if (!day || !startTime || !endTime) {
         showToast('Please fill in all fields', 'error');
         return;
     }
@@ -706,20 +712,24 @@ function handleAddSlot(e) {
 
     const timeSlot = formatTimeRange(startTime, endTime);
 
-    // Check if slot already exists
-    if (slotsData[location] && slotsData[location][day] && slotsData[location][day].includes(timeSlot)) {
-        showToast('This time slot already exists', 'error');
-        return;
-    }
-
-    // Reset form
+    // Reset form (time inputs and checkboxes)
     document.getElementById('slot-start').value = '';
     document.getElementById('slot-end').value = '';
+    checkedBoxes.forEach(cb => cb.checked = false);
 
     // Optimistic UI feedback
-    showToast(`Slot added: ${DAY_NAMES[day]} ${timeSlot}`, 'success');
+    const locationCount = locations.length;
+    const locationText = locationCount === 1 ? '1 location' : `${locationCount} locations`;
+    showToast(`Slot added to ${locationText}: ${DAY_NAMES[day]} ${timeSlot}`, 'success');
 
-    // Get or create the location document
+    // Add slot to each selected location
+    locations.forEach(location => {
+        addSlotToLocation(location, day, timeSlot);
+    });
+}
+
+// Add a single slot to a specific location
+function addSlotToLocation(location, day, timeSlot) {
     const docRef = db.collection("availableSlots").doc(location);
 
     docRef.get().then((doc) => {
@@ -756,8 +766,8 @@ function handleAddSlot(e) {
             return docRef.set(newDoc);
         }
     }).catch((error) => {
-        console.error("Error adding slot: ", error);
-        showToast("Error adding slot - please try again", "error");
+        console.error("Error adding slot to " + location + ": ", error);
+        showToast("Error adding slot to " + location, "error");
     });
 }
 
