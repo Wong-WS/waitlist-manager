@@ -51,6 +51,10 @@ document.addEventListener("DOMContentLoaded", function() {
     // Add Apartment form handler
     const addApartmentForm = document.getElementById("add-apartment-form");
     addApartmentForm.addEventListener("submit", handleAddApartment);
+
+    // Copy waitlist link button
+    const copyLinkBtn = document.getElementById("copy-link-btn");
+    copyLinkBtn.addEventListener("click", copyWaitlistLink);
 });
 
 // Verify user is admin and show panel
@@ -493,3 +497,39 @@ window.removeApartment = function(id, name) {
         });
     }
 };
+
+// Copy waitlist link to clipboard
+function copyWaitlistLink() {
+    const linkInput = document.getElementById('waitlist-link');
+    const copyBtn = document.getElementById('copy-link-btn');
+
+    // Select and copy the text
+    linkInput.select();
+    linkInput.setSelectionRange(0, 99999); // For mobile devices
+
+    navigator.clipboard.writeText(linkInput.value).then(() => {
+        // Show success feedback
+        showToast('Waitlist link copied to clipboard!', 'success');
+
+        // Temporarily change button text
+        const originalHTML = copyBtn.innerHTML;
+        copyBtn.innerHTML = `
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Copied!
+        `;
+        copyBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+        copyBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+
+        // Reset button after 2 seconds
+        setTimeout(() => {
+            copyBtn.innerHTML = originalHTML;
+            copyBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+            copyBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        showToast('Failed to copy link', 'error');
+    });
+}
