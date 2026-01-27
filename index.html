@@ -59,6 +59,32 @@
       </div>
     </header>
 
+    <!-- Available Slots Section -->
+    <div id="available-slots-section" class="max-w-2xl mx-auto mt-8 mb-8 p-6 bg-white rounded-lg shadow-lg">
+      <h2 class="text-xl font-semibold text-slate-900 mb-4 text-center">Available Lesson Times</h2>
+
+      <!-- Location Tabs -->
+      <div id="location-tabs" class="flex flex-wrap gap-2 justify-center mb-6 border-b border-gray-200 pb-4">
+        <!-- Tabs will be dynamically inserted -->
+      </div>
+
+      <!-- 7-Day Schedule Grid -->
+      <div id="slots-schedule" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+        <!-- Schedule will be dynamically inserted -->
+      </div>
+
+      <!-- Loading State -->
+      <div id="slots-loading" class="text-center py-8">
+        <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent"></div>
+        <p class="text-gray-500 mt-2 text-sm">Loading available slots...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div id="slots-empty" class="hidden text-center py-6">
+        <p class="text-gray-500 text-sm">No available slots at the moment. Please check back later or join the waitlist below.</p>
+      </div>
+    </div>
+
     <div class="max-w-md mx-auto mt-8 mb-12 p-6 bg-white rounded-lg shadow-lg">
       <form class="space-y-4" style="font-family: 'Inter', sans-serif">
         <div>

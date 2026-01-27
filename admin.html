@@ -266,6 +266,89 @@
             </div>
           </div>
         </div>
+
+        <!-- Available Slots Management Section -->
+        <div class="mt-8">
+          <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex justify-between items-center mb-6">
+              <div>
+                <h2 class="text-xl font-bold text-slate-900">Manage Available Slots</h2>
+                <p class="text-sm text-gray-600">Add or remove available lesson time slots for each location</p>
+              </div>
+            </div>
+
+            <!-- Add Slot Form -->
+            <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+              <form id="add-slot-form" class="flex flex-wrap gap-3 items-end">
+                <div class="flex-1 min-w-[150px]">
+                  <label for="slot-location" class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <select
+                    id="slot-location"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select location...</option>
+                    <!-- Options loaded dynamically -->
+                  </select>
+                </div>
+                <div class="w-32">
+                  <label for="slot-day" class="block text-sm font-medium text-gray-700 mb-1">Day</label>
+                  <select
+                    id="slot-day"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="monday">Monday</option>
+                    <option value="tuesday">Tuesday</option>
+                    <option value="wednesday">Wednesday</option>
+                    <option value="thursday">Thursday</option>
+                    <option value="friday">Friday</option>
+                    <option value="saturday">Saturday</option>
+                    <option value="sunday">Sunday</option>
+                  </select>
+                </div>
+                <div class="w-28">
+                  <label for="slot-start" class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                  <input
+                    type="time"
+                    id="slot-start"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div class="w-28">
+                  <label for="slot-end" class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                  <input
+                    type="time"
+                    id="slot-end"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap"
+                >
+                  Add Slot
+                </button>
+              </form>
+            </div>
+
+            <!-- Slots Display -->
+            <div id="slots-list" class="space-y-6">
+              <!-- Slots will be loaded here, grouped by location -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="slots-empty-state" class="hidden text-center py-8">
+              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 class="mt-2 text-sm font-medium text-gray-900">No available slots</h3>
+              <p class="mt-1 text-sm text-gray-500">Add your first available time slot above.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

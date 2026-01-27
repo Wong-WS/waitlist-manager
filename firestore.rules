@@ -46,6 +46,26 @@ service cloud.firestore {
                     && request.auth.token.admin == true;
     }
 
+    // Available slots collection rules
+    match /availableSlots/{locationId} {
+      // Anyone can read available slots (needed for customer page)
+      allow read: if true;
+
+      // Only authenticated admins can create slots
+      allow create: if request.auth != null
+                    && request.auth.token.admin == true
+                    && request.resource.data.keys().hasAll(['locationName', 'updatedAt'])
+                    && request.resource.data.locationName is string;
+
+      // Only authenticated admins can update slots
+      allow update: if request.auth != null
+                    && request.auth.token.admin == true;
+
+      // Only authenticated admins can delete slots
+      allow delete: if request.auth != null
+                    && request.auth.token.admin == true;
+    }
+
     // Deny all other collections by default
     match /{document=**} {
       allow read, write: if false;

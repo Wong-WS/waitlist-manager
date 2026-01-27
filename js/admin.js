@@ -4,6 +4,12 @@
 // Waitlist data cache
 let waitlistData = [];
 
+// Apartments data cache (for slot management dropdown)
+let apartmentsData = [];
+
+// Available slots data cache
+let slotsData = {};
+
 // Wait for DOM to load
 document.addEventListener("DOMContentLoaded", function() {
     // Set Firebase Auth persistence to SESSION (clears on browser close)
@@ -55,6 +61,10 @@ document.addEventListener("DOMContentLoaded", function() {
     // Copy waitlist link button
     const copyLinkBtn = document.getElementById("copy-link-btn");
     copyLinkBtn.addEventListener("click", copyWaitlistLink);
+
+    // Add Slot form handler
+    const addSlotForm = document.getElementById("add-slot-form");
+    addSlotForm.addEventListener("submit", handleAddSlot);
 });
 
 // Verify user is admin and show panel
@@ -145,6 +155,7 @@ function showAdminSection() {
     document.getElementById('admin-section').classList.remove('hidden');
     loadWaitlist();
     loadApartments();
+    loadAvailableSlots();
 }
 
 // Load waitlist data from Firestore
@@ -420,7 +431,13 @@ function loadApartments() {
     db.collection("apartments")
         .orderBy("name")
         .onSnapshot((snapshot) => {
+            // Update apartments cache
+            apartmentsData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
             renderApartments(snapshot.docs);
+            updateSlotLocationDropdown();
         }, (error) => {
             console.error("Error loading apartments: ", error);
             showToast("Error loading apartments", "error");
@@ -533,3 +550,238 @@ function copyWaitlistLink() {
         showToast('Failed to copy link', 'error');
     });
 }
+
+// ==================== AVAILABLE SLOTS MANAGEMENT ====================
+
+// Days of the week for display
+const DAYS_OF_WEEK = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const DAY_NAMES = {
+    monday: 'Monday',
+    tuesday: 'Tuesday',
+    wednesday: 'Wednesday',
+    thursday: 'Thursday',
+    friday: 'Friday',
+    saturday: 'Saturday',
+    sunday: 'Sunday'
+};
+
+// Load available slots from Firestore
+function loadAvailableSlots() {
+    db.collection("availableSlots")
+        .onSnapshot((snapshot) => {
+            slotsData = {};
+            snapshot.forEach((doc) => {
+                slotsData[doc.id] = doc.data();
+            });
+            renderSlots();
+            updateSlotLocationDropdown();
+        }, (error) => {
+            console.error("Error loading available slots: ", error);
+            showToast("Error loading available slots", "error");
+        });
+}
+
+// Update the location dropdown in the slot form with available apartments
+function updateSlotLocationDropdown() {
+    const locationSelect = document.getElementById('slot-location');
+    const currentValue = locationSelect.value;
+
+    locationSelect.innerHTML = '<option value="">Select location...</option>';
+
+    apartmentsData.forEach(apartment => {
+        const option = document.createElement('option');
+        option.value = apartment.name;
+        option.textContent = apartment.name;
+        locationSelect.appendChild(option);
+    });
+
+    // Restore previous selection if still valid
+    if (currentValue && apartmentsData.some(a => a.name === currentValue)) {
+        locationSelect.value = currentValue;
+    }
+}
+
+// Render slots grouped by location then by day
+function renderSlots() {
+    const listContainer = document.getElementById('slots-list');
+    const emptyState = document.getElementById('slots-empty-state');
+
+    const locations = Object.keys(slotsData);
+
+    // Check if there are any slots at all
+    let hasAnySlots = false;
+    locations.forEach(location => {
+        DAYS_OF_WEEK.forEach(day => {
+            if (slotsData[location][day] && slotsData[location][day].length > 0) {
+                hasAnySlots = true;
+            }
+        });
+    });
+
+    if (!hasAnySlots) {
+        listContainer.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+    } else {
+        emptyState.classList.add('hidden');
+    }
+
+    listContainer.innerHTML = locations.map(location => {
+        const locationData = slotsData[location];
+
+        // Build days HTML
+        const daysHtml = DAYS_OF_WEEK.map(day => {
+            const slots = locationData[day] || [];
+            if (slots.length === 0) return '';
+
+            const slotsHtml = slots.map(timeSlot => `
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-md">
+                    ${timeSlot}
+                    <button
+                        onclick="removeSlot('${location}', '${day}', '${timeSlot}')"
+                        class="text-blue-600 hover:text-red-600 ml-1"
+                        title="Remove slot"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </span>
+            `).join('');
+
+            return `
+                <div class="flex items-start gap-3 py-2">
+                    <span class="text-sm font-medium text-gray-600 w-24 shrink-0">${DAY_NAMES[day]}:</span>
+                    <div class="flex flex-wrap gap-2">${slotsHtml}</div>
+                </div>
+            `;
+        }).filter(html => html !== '').join('');
+
+        if (!daysHtml) return '';
+
+        return `
+            <div class="border border-gray-200 rounded-lg p-4">
+                <h3 class="text-lg font-semibold text-slate-900 mb-3 pb-2 border-b border-gray-200">${location}</h3>
+                <div class="space-y-1">
+                    ${daysHtml}
+                </div>
+            </div>
+        `;
+    }).filter(html => html !== '').join('');
+}
+
+// Format time from 24h to 12h AM/PM format
+function formatTime12h(time24) {
+    const [hours, minutes] = time24.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+}
+
+// Format time range
+function formatTimeRange(start, end) {
+    return `${formatTime12h(start)} - ${formatTime12h(end)}`;
+}
+
+// Handle add slot form submission
+function handleAddSlot(e) {
+    e.preventDefault();
+
+    const location = document.getElementById('slot-location').value;
+    const day = document.getElementById('slot-day').value;
+    const startTime = document.getElementById('slot-start').value;
+    const endTime = document.getElementById('slot-end').value;
+
+    if (!location || !day || !startTime || !endTime) {
+        showToast('Please fill in all fields', 'error');
+        return;
+    }
+
+    // Validate that end time is after start time
+    if (startTime >= endTime) {
+        showToast('End time must be after start time', 'error');
+        return;
+    }
+
+    const timeSlot = formatTimeRange(startTime, endTime);
+
+    // Check if slot already exists
+    if (slotsData[location] && slotsData[location][day] && slotsData[location][day].includes(timeSlot)) {
+        showToast('This time slot already exists', 'error');
+        return;
+    }
+
+    // Reset form
+    document.getElementById('slot-start').value = '';
+    document.getElementById('slot-end').value = '';
+
+    // Optimistic UI feedback
+    showToast(`Slot added: ${DAY_NAMES[day]} ${timeSlot}`, 'success');
+
+    // Get or create the location document
+    const docRef = db.collection("availableSlots").doc(location);
+
+    docRef.get().then((doc) => {
+        if (doc.exists) {
+            // Update existing document - add to array
+            const currentSlots = doc.data()[day] || [];
+            if (!currentSlots.includes(timeSlot)) {
+                currentSlots.push(timeSlot);
+                // Sort slots by start time
+                currentSlots.sort((a, b) => {
+                    const timeA = a.split(' - ')[0];
+                    const timeB = b.split(' - ')[0];
+                    return timeA.localeCompare(timeB);
+                });
+            }
+            return docRef.update({
+                [day]: currentSlots,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } else {
+            // Create new document
+            const newDoc = {
+                locationName: location,
+                monday: [],
+                tuesday: [],
+                wednesday: [],
+                thursday: [],
+                friday: [],
+                saturday: [],
+                sunday: [],
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            newDoc[day] = [timeSlot];
+            return docRef.set(newDoc);
+        }
+    }).catch((error) => {
+        console.error("Error adding slot: ", error);
+        showToast("Error adding slot - please try again", "error");
+    });
+}
+
+// Remove a slot
+window.removeSlot = function(location, day, timeSlot) {
+    if (confirm(`Remove ${timeSlot} on ${DAY_NAMES[day]} at ${location}?`)) {
+        // Optimistic UI feedback
+        showToast(`Slot removed`, 'success');
+
+        const docRef = db.collection("availableSlots").doc(location);
+
+        docRef.get().then((doc) => {
+            if (doc.exists) {
+                const currentSlots = doc.data()[day] || [];
+                const updatedSlots = currentSlots.filter(slot => slot !== timeSlot);
+
+                return docRef.update({
+                    [day]: updatedSlots,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+        }).catch((error) => {
+            console.error("Error removing slot: ", error);
+            showToast("Error removing slot - please try again", "error");
+        });
+    }
+};

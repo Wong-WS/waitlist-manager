@@ -3,6 +3,9 @@ document.addEventListener("DOMContentLoaded", function () {
   // Load apartments for the location dropdown
   loadApartments();
 
+  // Load available slots for display
+  loadAvailableSlots();
+
   // Get form element
   const form = document.querySelector("form");
   const submitButton = form.querySelector('button[type="submit"]');
@@ -311,4 +314,137 @@ document.addEventListener("DOMContentLoaded", function () {
         console.error("Error loading apartments: ", error);
       });
   }
+
+  // ==================== AVAILABLE SLOTS DISPLAY ====================
+
+  // Days of the week
+  const DAYS_OF_WEEK = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const DAY_SHORT_NAMES = {
+    monday: 'Mon',
+    tuesday: 'Tue',
+    wednesday: 'Wed',
+    thursday: 'Thu',
+    friday: 'Fri',
+    saturday: 'Sat',
+    sunday: 'Sun'
+  };
+
+  // Available slots data
+  let availableSlotsData = {};
+  let currentLocation = null;
+
+  // Load available slots from Firestore
+  function loadAvailableSlots() {
+    db.collection("availableSlots")
+      .onSnapshot((snapshot) => {
+        availableSlotsData = {};
+        snapshot.forEach((doc) => {
+          availableSlotsData[doc.id] = doc.data();
+        });
+        renderCustomerSlots();
+      }, (error) => {
+        console.error("Error loading available slots: ", error);
+        document.getElementById('slots-loading').classList.add('hidden');
+        document.getElementById('slots-empty').classList.remove('hidden');
+      });
+  }
+
+  // Render customer-facing slots display
+  function renderCustomerSlots() {
+    const tabsContainer = document.getElementById('location-tabs');
+    const scheduleContainer = document.getElementById('slots-schedule');
+    const loadingEl = document.getElementById('slots-loading');
+    const emptyEl = document.getElementById('slots-empty');
+
+    // Hide loading
+    loadingEl.classList.add('hidden');
+
+    const locations = Object.keys(availableSlotsData);
+
+    // Check if there are any slots
+    let hasAnySlots = false;
+    locations.forEach(location => {
+      DAYS_OF_WEEK.forEach(day => {
+        if (availableSlotsData[location][day] && availableSlotsData[location][day].length > 0) {
+          hasAnySlots = true;
+        }
+      });
+    });
+
+    if (!hasAnySlots || locations.length === 0) {
+      tabsContainer.innerHTML = '';
+      scheduleContainer.innerHTML = '';
+      emptyEl.classList.remove('hidden');
+      return;
+    }
+
+    emptyEl.classList.add('hidden');
+
+    // Set current location if not set
+    if (!currentLocation || !locations.includes(currentLocation)) {
+      currentLocation = locations[0];
+    }
+
+    // Render location tabs
+    tabsContainer.innerHTML = locations.map(location => {
+      const isActive = location === currentLocation;
+      return `
+        <button
+          onclick="switchLocationTab('${location}')"
+          class="location-tab px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            isActive
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }"
+          data-location="${location}"
+        >
+          ${location}
+        </button>
+      `;
+    }).join('');
+
+    // Render schedule for current location
+    renderSchedule(currentLocation);
+  }
+
+  // Render 7-day schedule for a location
+  function renderSchedule(location) {
+    const scheduleContainer = document.getElementById('slots-schedule');
+    const locationData = availableSlotsData[location] || {};
+
+    scheduleContainer.innerHTML = DAYS_OF_WEEK.map(day => {
+      const slots = locationData[day] || [];
+      const slotsHtml = slots.length > 0
+        ? slots.map(slot => `<div class="text-xs text-blue-700 bg-blue-50 rounded px-2 py-1 mb-1">${slot}</div>`).join('')
+        : '<div class="text-xs text-gray-400 italic">-</div>';
+
+      return `
+        <div class="text-center">
+          <div class="font-medium text-gray-700 text-sm mb-2 pb-1 border-b border-gray-200">${DAY_SHORT_NAMES[day]}</div>
+          <div class="space-y-1">
+            ${slotsHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Switch location tab
+  window.switchLocationTab = function(location) {
+    currentLocation = location;
+
+    // Update tab styles
+    document.querySelectorAll('.location-tab').forEach(tab => {
+      if (tab.dataset.location === location) {
+        tab.classList.remove('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+        tab.classList.add('bg-blue-600', 'text-white');
+      } else {
+        tab.classList.remove('bg-blue-600', 'text-white');
+        tab.classList.add('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+      }
+    });
+
+    // Render schedule for selected location
+    renderSchedule(location);
+  };
 });
