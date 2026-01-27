@@ -65,6 +65,31 @@ document.addEventListener("DOMContentLoaded", function() {
     // Add Slot form handler
     const addSlotForm = document.getElementById("add-slot-form");
     addSlotForm.addEventListener("submit", handleAddSlot);
+
+    // Multi-delete modal button handlers
+    document.getElementById('modal-delete-one').addEventListener('click', () => {
+        const { location, day, timeSlot } = window.pendingDelete;
+        removeSlotFromLocation(location, day, timeSlot);
+        showToast('Slot removed from ' + location, 'success');
+        hideMultiDeleteModal();
+    });
+
+    document.getElementById('modal-delete-exact').addEventListener('click', () => {
+        const { day, exact } = window.pendingDelete;
+        exact.forEach(e => removeSlotFromLocation(e.location, day, e.slot));
+        showToast(`Slot removed from ${exact.length} locations`, 'success');
+        hideMultiDeleteModal();
+    });
+
+    document.getElementById('modal-delete-all').addEventListener('click', () => {
+        const { day, exact, similar } = window.pendingDelete;
+        const all = [...exact, ...similar];
+        all.forEach(e => removeSlotFromLocation(e.location, day, e.slot));
+        showToast(`Removed ${all.length} slots from ${all.length} locations`, 'success');
+        hideMultiDeleteModal();
+    });
+
+    document.getElementById('modal-cancel').addEventListener('click', hideMultiDeleteModal);
 });
 
 // Verify user is admin and show panel
@@ -771,27 +796,123 @@ function addSlotToLocation(location, day, timeSlot) {
     });
 }
 
-// Remove a slot
-window.removeSlot = function(location, day, timeSlot) {
-    if (confirm(`Remove ${timeSlot} on ${DAY_NAMES[day]} at ${location}?`)) {
-        // Optimistic UI feedback
-        showToast(`Slot removed`, 'success');
+// Parse time string like "1:00 PM" to minutes since midnight
+function parseTimeToMinutes(timeStr) {
+    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!match) return 0;
+    let hours = parseInt(match[1]);
+    const minutes = parseInt(match[2]);
+    const period = match[3].toUpperCase();
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+}
 
-        const docRef = db.collection("availableSlots").doc(location);
+// Get start time from a slot string like "1:00 PM - 2:00 PM"
+function getSlotStartMinutes(timeSlot) {
+    const startTime = timeSlot.split(' - ')[0];
+    return parseTimeToMinutes(startTime);
+}
 
-        docRef.get().then((doc) => {
-            if (doc.exists) {
-                const currentSlots = doc.data()[day] || [];
-                const updatedSlots = currentSlots.filter(slot => slot !== timeSlot);
+// Find exact and similar slots across all locations
+function findRelatedSlots(day, timeSlot) {
+    const targetStart = getSlotStartMinutes(timeSlot);
+    const exact = [];    // Same day + same time
+    const similar = [];  // Same day + start within 30 min (but not exact)
 
-                return docRef.update({
-                    [day]: updatedSlots,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+    Object.keys(slotsData).forEach(location => {
+        const daySlots = slotsData[location][day] || [];
+        daySlots.forEach(slot => {
+            if (slot === timeSlot) {
+                exact.push({ location, slot });
+            } else {
+                const slotStart = getSlotStartMinutes(slot);
+                const diff = Math.abs(slotStart - targetStart);
+                if (diff <= 30) {
+                    similar.push({ location, slot });
+                }
             }
-        }).catch((error) => {
-            console.error("Error removing slot: ", error);
-            showToast("Error removing slot - please try again", "error");
         });
+    });
+
+    return { exact, similar };
+}
+
+// Show multi-delete modal with options
+function showMultiDeleteModal(location, day, timeSlot, exact, similar) {
+    window.pendingDelete = { location, day, timeSlot, exact, similar };
+
+    // Update modal content
+    document.getElementById('modal-slot-info').textContent =
+        `${timeSlot} on ${DAY_NAMES[day]}`;
+    document.getElementById('modal-current-location').textContent = location;
+
+    // Exact matches info
+    const exactBtn = document.getElementById('modal-delete-exact');
+    const exactInfo = document.getElementById('modal-exact-info');
+    if (exact.length > 1) {
+        const otherExact = exact.filter(e => e.location !== location);
+        exactInfo.textContent = `Exact matches at: ${otherExact.map(e => e.location).join(', ')}`;
+        document.getElementById('modal-exact-count').textContent = exact.length;
+        exactBtn.classList.remove('hidden');
+    } else {
+        exactInfo.textContent = '';
+        exactBtn.classList.add('hidden');
     }
+
+    // Similar slots info
+    const allBtn = document.getElementById('modal-delete-all');
+    const similarInfo = document.getElementById('modal-similar-info');
+    if (similar.length > 0) {
+        const similarText = similar.map(s => `${s.slot} at ${s.location}`).join(', ');
+        similarInfo.textContent = `Similar slots (within 30 min): ${similarText}`;
+        document.getElementById('modal-all-count').textContent = exact.length + similar.length;
+        allBtn.classList.remove('hidden');
+    } else {
+        similarInfo.textContent = '';
+        allBtn.classList.add('hidden');
+    }
+
+    document.getElementById('multi-delete-modal').classList.remove('hidden');
+}
+
+// Hide multi-delete modal
+function hideMultiDeleteModal() {
+    document.getElementById('multi-delete-modal').classList.add('hidden');
+    window.pendingDelete = null;
+}
+
+// Remove a single slot from a specific location (used by modal actions)
+function removeSlotFromLocation(location, day, timeSlot) {
+    const docRef = db.collection("availableSlots").doc(location);
+    docRef.get().then((doc) => {
+        if (doc.exists) {
+            const currentSlots = doc.data()[day] || [];
+            const updatedSlots = currentSlots.filter(slot => slot !== timeSlot);
+            return docRef.update({
+                [day]: updatedSlots,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+    }).catch((error) => {
+        console.error("Error removing slot: ", error);
+        showToast("Error removing slot - please try again", "error");
+    });
+}
+
+// Remove a slot (main handler - detects related slots and shows modal if needed)
+window.removeSlot = function(location, day, timeSlot) {
+    const { exact, similar } = findRelatedSlots(day, timeSlot);
+
+    // If only this one slot exists (no other exact or similar)
+    if (exact.length <= 1 && similar.length === 0) {
+        if (confirm(`Remove ${timeSlot} on ${DAY_NAMES[day]} at ${location}?`)) {
+            removeSlotFromLocation(location, day, timeSlot);
+            showToast('Slot removed', 'success');
+        }
+        return;
+    }
+
+    // Show modal with options
+    showMultiDeleteModal(location, day, timeSlot, exact, similar);
 };

@@ -351,6 +351,32 @@
       </div>
     </div>
 
+    <!-- Multi-Delete Confirmation Modal -->
+    <div id="multi-delete-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Delete Time Slot</h3>
+        <p class="text-gray-600 mb-2">
+          <span class="font-medium" id="modal-slot-info"></span>
+        </p>
+        <div id="modal-exact-info" class="text-sm text-gray-500 mb-1"></div>
+        <div id="modal-similar-info" class="text-sm text-gray-500 mb-4"></div>
+        <div class="flex flex-col gap-2">
+          <button id="modal-delete-one" class="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm">
+            Delete from <span id="modal-current-location" class="font-medium"></span> only
+          </button>
+          <button id="modal-delete-exact" class="hidden w-full px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 text-sm">
+            Delete exact matches (<span id="modal-exact-count"></span> locations)
+          </button>
+          <button id="modal-delete-all" class="hidden w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm">
+            Delete all including similar (<span id="modal-all-count"></span> locations)
+          </button>
+          <button id="modal-cancel" class="w-full px-4 py-2 text-gray-600 hover:text-gray-800 text-sm">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
